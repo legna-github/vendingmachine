@@ -29,6 +29,11 @@ public class Inventory {
 		Objects.requireNonNull(stock.get(productId), "Product is not on stock  : " + productId);
 		return stock.get(productId).pop();
 	}
+	
+	public int check(String productId) {
+		Objects.requireNonNull(stock.get(productId), "Product is not on stock  : " + productId);
+		return stock.get(productId).size();
+	}
 
 	public void report() {
 		AtomicInteger grandTotal = new AtomicInteger(0);
@@ -60,4 +65,5 @@ public class Inventory {
 		}
 		
 	}
+
 }

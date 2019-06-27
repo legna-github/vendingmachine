@@ -1,6 +1,9 @@
 package lc.phx.interview.vending_machine;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Sale {
 
@@ -14,10 +17,14 @@ public class Sale {
 		this.salesRegister = new Inventory();
 	}
 
-	public Product sales(String productId) {
-		Product sold = inventory.removed(productId);
-		salesRegister.stock(Arrays.asList(sold));
-		return sold;
+	public List<Product> sales(String productId, int quantity) {
+		return IntStream.range(0, quantity).mapToObj(idx -> {
+			Product sold = inventory.removed(productId);
+			salesRegister.stock(Arrays.asList(sold));
+			System.out.println("Dispensed product " + productId);
+			return sold;
+		})
+		.collect(Collectors.toList());
 	}
 
 	public void report() {

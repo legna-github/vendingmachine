@@ -74,15 +74,25 @@ public class App
 
 		ENTER {
 			@Override
-			public void execute(App app, String productId, String ignore) {
-				Integer price = new ProductCatalog().getProduct(productId).getPrice();
-				if(price > app.runningBalance) {
-					System.out.println("Insuficient balance price :" + price + ", balance :" + app.runningBalance);
-				} 
+			public void execute(App app, String productId, String quantity) {
+				Objects.requireNonNull(productId, "Missing productId");
+				// .getProduct(productId) check that we carry the product
+				int price = new ProductCatalog().getProduct(productId).getPrice();
+				// .check(productId) check that we have the product in stock
+				int inStock = app.inventory.check(productId);
+				// quantity = 1 by default
+				int cnt = Integer.parseInt(Objects.nonNull(quantity) ? quantity: "1" );
+				if(price * cnt > app.runningBalance) {
+					System.out.println("Insuficient balance, cost :" + (price * cnt) + ", balance :" + app.runningBalance);
+				}
+				else if(cnt > inStock) {
+					System.out.println("Insuficient stock, we have : " + inStock);
+				}
 				else {
 
-					app.runningBalance -= app.sales.sales(productId).getPrice();
-					System.out.println("Dispensed product " + productId);
+					app.sales.sales(productId, cnt).forEach(product -> {
+						app.runningBalance -= product.getPrice();
+					});
 				}
 			}
 		},
@@ -128,6 +138,9 @@ public class App
 					.flatMap(List::stream)
 					.collect(Collectors.toList());
 				}
+//				return createProducts(
+//						Integer.parseInt(Objects.nonNull(quantity) ? quantity: "10" ), 
+//						productCatalog.getProduct(productId).getId());
 				return createProducts(
 						Integer.parseInt(Objects.requireNonNull(quantity, "quantity is required")), 
 						productCatalog.getProduct(productId).getId());
