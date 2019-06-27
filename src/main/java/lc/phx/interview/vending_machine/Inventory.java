@@ -2,15 +2,19 @@ package lc.phx.interview.vending_machine;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class Inventory {
 
-	private final Map<String, Stack<Product>> inventory;
+	private static final int MAX_CAPACITY = 10;
+
+	private final ProductCatalog catalog; 
+
+	private final Map<String, MyStack> inventory;
 	
 	public Inventory() {
 		this(Collections.emptyList());
@@ -18,22 +22,22 @@ public class Inventory {
 
 	public Inventory(Collection<Product> products) {
 		super();
-		this.inventory = 
-				products.stream()
-				.collect(Collectors.groupingBy(Product::getId, Collectors.toCollection(Stack::new)));
+		this.catalog = new ProductCatalog();
+		this.inventory = new HashMap<>();
+		stock(products);
 	}
 	
 	public void stock(Collection<Product> products) {
-		products.forEach(product -> inventory.computeIfAbsent(product.getId(), k -> new Stack<Product>()).add(product));
+		products.forEach(product -> inventory.computeIfAbsent(catalog.getProduct(product.getId()).getId(), k -> new MyStack()).add(product));
 	}
 
 	public Product sales(String productId) {
-		Objects.requireNonNull(inventory.get(productId), "Unknown product");
+		Objects.requireNonNull(inventory.get(productId), "Product is not on inventory  : " + productId);
 		return inventory.get(productId).pop();
 	}
 
 	public Integer price(String productId) {
-		Objects.requireNonNull(inventory.get(productId), "Unknown product");
+		Objects.requireNonNull(inventory.get(productId), "Product is not on inventory : " + productId);
 		return inventory.get(productId).peek().getPrice();
 	}
 	
@@ -53,5 +57,18 @@ public class Inventory {
 			System.out.println(String.format("%10s,%25s,%5s,%5s,%5s", productId, description, size, price, value));
 		});
 		System.out.println("Grand Total:" + grandTotal.get());
+	}
+	
+	private class MyStack extends Stack<Product>{
+
+		private static final long serialVersionUID = -3451085333802155894L;
+
+		public synchronized boolean add(Product product) {
+			if(size() < MAX_CAPACITY) {
+				return super.add(product);
+			}
+			return false;
+		}
+		
 	}
 }

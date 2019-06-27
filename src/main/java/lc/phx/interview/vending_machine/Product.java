@@ -26,5 +26,9 @@ public class Product {
 	public Integer getPrice() {
 		return price;
 	}
+
+	public Product copy() {
+		return new Product(getId(), getDescription(), getPrice());
+	}
 	
 }

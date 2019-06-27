@@ -1,6 +1,5 @@
 package lc.phx.interview.vending_machine;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EmptyStackException;
 import java.util.EnumSet;
@@ -19,7 +18,7 @@ public class App
 	private final AtomicInteger availableBalance;
 	
 	private final Pattern pattern = 
-			Pattern.compile("^(\\d+)?(ENTER|CANCEL|MONEY|REPORT|STOCK|DONE)$");
+			Pattern.compile("^(\\d+)?(ENTER|CANCEL|MONEY|REPORT|STOCK|DONE)(\\d+)?$");
 
 	private final Inventory inventory;
 
@@ -44,7 +43,7 @@ public class App
     			
     	        if(matcher.find()) {
     	    		try {
-						Command.valueOf(matcher.group(2)).execute(this, matcher.group(1));
+						Command.valueOf(matcher.group(2)).execute(this, matcher.group(1), matcher.group(3));
 					}
     	    		catch (EmptyStackException e) {
     	    			System.out.println("Product sold out");
@@ -69,9 +68,10 @@ public class App
 		new App().start();
     }
 
-	private static List<Product> createProducts(int quantity, String id, String description, Integer price) {
+	private static List<Product> createProducts(int quantity, String id) {
+		ProductCatalog productCatalog = new ProductCatalog();
 		return IntStream.range(0, quantity)
-				.mapToObj(idx -> new Product(id, description, price))
+				.mapToObj(idx -> productCatalog.getProduct(id))
 				.collect(Collectors.toList());
 	}
 	
@@ -79,7 +79,7 @@ public class App
 
 		ENTER {
 			@Override
-			public void execute(App app, String productId) {
+			public void execute(App app, String productId, String ignore) {
 				Integer price = app.sales.price(productId);
 				if(price > app.availableBalance.get()) {
 					System.out.println("Insuficient balance price :" + price + ", balance :" + app.availableBalance.get());
@@ -94,52 +94,53 @@ public class App
 		},
 		DONE {
 			@Override
-			public void execute(App app, String ignore) {
+			public void execute(App app, String arg1, String arg2) {
 				System.out.println(String.format("return balance %d", app.availableBalance.getAndSet(0)));
 			}
 		},
 		CANCEL {
 			@Override
-			public void execute(App app, String productId) {
+			public void execute(App app, String productId, String ignore) {
 				// do nothing
 			}
 		},
 		MONEY {
 			@Override
-			public void execute(App app, String amount) {
+			public void execute(App app, String amount, String ignore) {
 				Objects.requireNonNull(amount, "Missing amount");
 				app.availableBalance.addAndGet(Integer.parseInt(amount));				
 			}
 		},
 		REPORT {
 			@Override
-			public void execute(App app, String report) {
-				Report.execute(app, Report.findByCode(report));
+			public void execute(App app, String report, String ignore) {
+				Report.execute(app, Report.findByCode(report, EnumSet.allOf(Report.class)));
 			}
 		},
 		STOCK {
 			@Override
-			public void execute(App app, String productId) {
-				
-				List<Product> products = new ArrayList<>(); 
+			public void execute(App app, String productId, String quantity) {
+				app.sales.stock(createProductStock(productId, quantity));
+			}
 
-				boolean all = Objects.isNull(productId);
-				if(all  || "12".equals(productId)) {
-					products.addAll(createProducts(9, "12", "Snack 12", 27));
+			private List<Product> createProductStock(String productId, String quantity) {
+				ProductCatalog productCatalog = new ProductCatalog();
+				if(Objects.isNull(productId)) {
+					return productCatalog.getProducts()
+					.stream()
+					.map(Product::getId)
+					.map(id -> createProducts(15, id))
+					.flatMap(List::stream)
+					.collect(Collectors.toList());
 				}
-				if(all  || "13".equals(productId)) {
-					products.addAll(createProducts(5, "13", "Snack 13", 31));
-				}
-				if(all  || "14".equals(productId)) {
-					products.addAll(createProducts(7, "14", "Snack 14", 43));
-				}
-				
-				app.sales.stock(products);
+				return createProducts(
+						Integer.parseInt(Objects.requireNonNull(quantity, "quantity is required")), 
+						productCatalog.getProduct(productId).getId());
 			}
 		}
 		;
 
-		public abstract void execute(App app, String group);
+		public abstract void execute(App app, String arg1, String arg2);
 	}
 	
 	private enum Report {
@@ -164,15 +165,15 @@ public class App
 			this.code = code;
 		}
 
-		public static Set<Report> findByCode(String code) {
+		public static Set<Report> findByCode(String code, Set<Report> defaultValue) {
 			EnumSet<Report> result = EnumSet.allOf(Report.class)
 			.stream()
 			.filter(report -> Objects.equals(code, report.code))
 			.collect(Collectors.toCollection(() -> EnumSet.noneOf(Report.class)));
-			if(result.isEmpty()) {
-				return EnumSet.allOf(Report.class);
+			if(!result.isEmpty()) {
+				return result;
 			}
-			return result;
+			return defaultValue;
 		}
 
 		abstract void execute(App app);
