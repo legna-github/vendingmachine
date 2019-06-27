@@ -1,13 +1,11 @@
 package lc.phx.interview.vending_machine;
 
-import java.util.Collections;
 import java.util.EmptyStackException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -15,7 +13,6 @@ import java.util.stream.IntStream;
 
 public class App 
 {
-	private final AtomicInteger availableBalance;
 	
 	private final Pattern pattern = 
 			Pattern.compile("^(\\d+)?(ENTER|CANCEL|MONEY|REPORT|STOCK|DONE)(\\d+)?$");
@@ -24,14 +21,12 @@ public class App
 
 	private final Sale sales;
 
-    public App() {
-		this(Collections.emptyList());
-	}
+	private int runningBalance;
 
-	public App(List<Product> products) {
+    public App() {
 		super();
-		this.availableBalance = new AtomicInteger(0);
-		this.inventory = new Inventory(products);
+		this.runningBalance = 0;
+		this.inventory = new Inventory();
 		this.sales = new Sale(inventory);
 	}
 
@@ -55,7 +50,7 @@ public class App
     	        else {
     	        	System.out.println("Invalid command");
     	        }
-    	        System.out.println("Available balance " + availableBalance);
+    	        System.out.println("Available balance " + runningBalance);
 
     		}
     	}
@@ -80,14 +75,13 @@ public class App
 		ENTER {
 			@Override
 			public void execute(App app, String productId, String ignore) {
-				Integer price = app.sales.price(productId);
-				if(price > app.availableBalance.get()) {
-					System.out.println("Insuficient balance price :" + price + ", balance :" + app.availableBalance.get());
+				Integer price = new ProductCatalog().getProduct(productId).getPrice();
+				if(price > app.runningBalance) {
+					System.out.println("Insuficient balance price :" + price + ", balance :" + app.runningBalance);
 				} 
 				else {
 
-					Product product = app.sales.sales(productId);
-					app.availableBalance.addAndGet(-product.getPrice());
+					app.runningBalance -= app.sales.sales(productId).getPrice();
 					System.out.println("Dispensed product " + productId);
 				}
 			}
@@ -95,7 +89,8 @@ public class App
 		DONE {
 			@Override
 			public void execute(App app, String arg1, String arg2) {
-				System.out.println(String.format("return balance %d", app.availableBalance.getAndSet(0)));
+				System.out.println(String.format("return balance %d", app.runningBalance));
+				app.runningBalance = 0;
 			}
 		},
 		CANCEL {
@@ -108,7 +103,7 @@ public class App
 			@Override
 			public void execute(App app, String amount, String ignore) {
 				Objects.requireNonNull(amount, "Missing amount");
-				app.availableBalance.addAndGet(Integer.parseInt(amount));				
+				app.runningBalance += Integer.parseInt(amount);				
 			}
 		},
 		REPORT {
@@ -120,7 +115,7 @@ public class App
 		STOCK {
 			@Override
 			public void execute(App app, String productId, String quantity) {
-				app.sales.stock(createProductStock(productId, quantity));
+				app.inventory.stock(createProductStock(productId, quantity));
 			}
 
 			private List<Product> createProductStock(String productId, String quantity) {

@@ -1,7 +1,6 @@
 package lc.phx.interview.vending_machine;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -14,40 +13,30 @@ public class Inventory {
 
 	private final ProductCatalog catalog; 
 
-	private final Map<String, MyStack> inventory;
+	private final Map<String, MyStack> stock;
 	
 	public Inventory() {
-		this(Collections.emptyList());
-	}
-
-	public Inventory(Collection<Product> products) {
 		super();
 		this.catalog = new ProductCatalog();
-		this.inventory = new HashMap<>();
-		stock(products);
+		this.stock = new HashMap<>();
 	}
 	
 	public void stock(Collection<Product> products) {
-		products.forEach(product -> inventory.computeIfAbsent(catalog.getProduct(product.getId()).getId(), k -> new MyStack()).add(product));
+		products.forEach(product -> stock.computeIfAbsent(catalog.getProduct(product.getId()).getId(), k -> new MyStack()).add(product));
 	}
 
-	public Product sales(String productId) {
-		Objects.requireNonNull(inventory.get(productId), "Product is not on inventory  : " + productId);
-		return inventory.get(productId).pop();
+	public Product removed(String productId) {
+		Objects.requireNonNull(stock.get(productId), "Product is not on stock  : " + productId);
+		return stock.get(productId).pop();
 	}
 
-	public Integer price(String productId) {
-		Objects.requireNonNull(inventory.get(productId), "Product is not on inventory : " + productId);
-		return inventory.get(productId).peek().getPrice();
-	}
-	
 	public void report() {
 		AtomicInteger grandTotal = new AtomicInteger(0);
-		inventory.forEach((productId, products) ->  {
-			int size = products.size();
+		stock.forEach((productId, products) ->  {
 			String description = "depleted";
 			int value = 0;
 			int price = 0;
+			int size = products.size();
 			if(size > 0) {
 				description = products.peek().getDescription();
 				price = products.peek().getPrice();
