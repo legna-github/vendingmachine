@@ -10,6 +10,12 @@ public class Sale {
 
 	private final Inventory salesRegister;
 	
+	public Sale() {
+		super();
+		this.inventory = new Inventory(Collections.emptyList());
+		this.salesRegister = new Inventory(Collections.emptyList());
+	}
+
 	public Sale(Inventory inventory) {
 		super();
 		this.inventory = inventory;
@@ -31,10 +37,6 @@ public class Sale {
 	}
 	
 	public void report() {
-		System.out.println("Inventory report");
-		inventory.report();
-		System.out.println();
-		System.out.println("Sales report");
 		salesRegister.report();
 	}
 

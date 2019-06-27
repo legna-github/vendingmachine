@@ -1,6 +1,7 @@
 package lc.phx.interview.vending_machine;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Stack;
@@ -11,6 +12,10 @@ public class Inventory {
 
 	private final Map<String, Stack<Product>> inventory;
 	
+	public Inventory() {
+		this(Collections.emptyList());
+	}
+
 	public Inventory(Collection<Product> products) {
 		super();
 		this.inventory = 

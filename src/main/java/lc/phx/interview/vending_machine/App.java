@@ -1,10 +1,13 @@
 package lc.phx.interview.vending_machine;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EmptyStackException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,14 +18,22 @@ public class App
 {
 	private final AtomicInteger availableBalance;
 	
-	private final Pattern pattern = Pattern.compile("^(\\d+)?(ENTER|CANCEL|MONEY|REPORT|STOCK|DONE)$");
+	private final Pattern pattern = 
+			Pattern.compile("^(\\d+)?(ENTER|CANCEL|MONEY|REPORT|STOCK|DONE)$");
+
+	private final Inventory inventory;
 
 	private final Sale sales;
 
-    public App(List<Product> products) {
+    public App() {
+		this(Collections.emptyList());
+	}
+
+	public App(List<Product> products) {
 		super();
 		this.availableBalance = new AtomicInteger(0);
-		this.sales = new Sale(new Inventory(products));
+		this.inventory = new Inventory(products);
+		this.sales = new Sale(inventory);
 	}
 
     public void start() {
@@ -55,12 +66,7 @@ public class App
 	public static void main( String[] args )
     {
 
-		List<Product> products = 
-				createProducts(9, "12", "Snack 12", 27);
-		products.addAll(createProducts(5, "13", "Snack 13", 31));
-		products.addAll(createProducts(7, "14", "Snack 14", 43));
-
-		new App(products).start();
+		new App().start();
     }
 
 	private static List<Product> createProducts(int quantity, String id, String description, Integer price) {
@@ -107,8 +113,8 @@ public class App
 		},
 		REPORT {
 			@Override
-			public void execute(App app, String ignore) {
-				app.sales.report();
+			public void execute(App app, String report) {
+				Report.execute(app, Report.findByCode(report));
 			}
 		},
 		STOCK {
@@ -134,5 +140,45 @@ public class App
 		;
 
 		public abstract void execute(App app, String group);
+	}
+	
+	private enum Report {
+		SALES("01") {
+			@Override
+			void execute(App app) {
+				System.out.println("Sales report");
+				app.sales.report();
+			}
+		},
+		INVENTORY("02") {
+			@Override
+			void execute(App app) {
+				System.out.println("Inventory report");
+				app.inventory.report();
+			}
+		}
+		;
+		private String code;
+		
+		private Report(String code) {
+			this.code = code;
+		}
+
+		public static Set<Report> findByCode(String code) {
+			EnumSet<Report> result = EnumSet.allOf(Report.class)
+			.stream()
+			.filter(report -> Objects.equals(code, report.code))
+			.collect(Collectors.toCollection(() -> EnumSet.noneOf(Report.class)));
+			if(result.isEmpty()) {
+				return EnumSet.allOf(Report.class);
+			}
+			return result;
+		}
+
+		abstract void execute(App app);
+
+		public static void execute(App app, Set<Report> reports) {
+			reports.forEach(report -> report.execute(app));
+		}
 	}
 }
