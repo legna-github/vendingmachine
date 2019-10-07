@@ -61,7 +61,7 @@ public class Inventory {
 			if(size() < MAX_CAPACITY) {
 				return super.add(product);
 			}
-			return false;
+			throw new IllegalArgumentException("Max capacity reached");
 		}
 		
 	}
